@@ -1,0 +1,7 @@
+env: "Adroit"
+policy: "relocate_cloned"
+dataset_group: "D4RL"
+dataset_entry: ${datasets.dataset_group}/${datasets.env}/${datasets.env}_${datasets.policy}-v0
+env_entry: 'relocate-cloned-v0'
+critic_hyperparam: 0.7
+dropout_rate: 0.1

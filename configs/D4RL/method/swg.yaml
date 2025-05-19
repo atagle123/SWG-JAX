@@ -1,0 +1,3 @@
+agent: 
+ _target_: "DDPMSWGLearner"
+name: swg
