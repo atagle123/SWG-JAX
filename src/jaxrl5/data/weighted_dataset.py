@@ -14,18 +14,18 @@ from src.models.weights import build_weights_fn
 
 @partial(jax.jit, static_argnames=("critic_fn",))
 def compute_q(critic_fn, critic_params, observations, actions):
-    q_values = critic_fn({'params': critic_params}, observations, actions)
+    q_values = critic_fn({"params": critic_params}, observations, actions)
     return q_values.min(axis=0)
 
 
 @partial(jax.jit, static_argnames=("value_fn",))
 def compute_v(value_fn, value_params, observations):
-    return value_fn({'params': value_params}, observations)
+    return value_fn({"params": value_params}, observations)
 
 
 class WeightedDataset(Dataset):
     def __init__(self, env: gym.Env, clip_to_eps: bool = True, eps: float = 1e-5):
-        
+
         dataset_dict = d4rl.qlearning_dataset(env)
 
         if clip_to_eps:
@@ -57,11 +57,13 @@ class WeightedDataset(Dataset):
 
         super().__init__(dataset_dict)
 
-    def build_weights(self, 
-                    agent, 
-                    critic_hyperparam: float = 0.7, 
-                    weights_function: str = 'expectile',
-                    norm: bool = False):
+    def build_weights(
+        self,
+        agent,
+        critic_hyperparam: float = 0.7,
+        weights_function: str = "expectile",
+        norm: bool = False,
+    ):
         """
         Build weights for the dataset using JAX.
         """
@@ -76,38 +78,55 @@ class WeightedDataset(Dataset):
 
         weights_list = []
 
-        for states_batch, actions_batch in tqdm(zip(states_batches, actions_batches), total=num_batches, desc="Computing weights"):
+        for states_batch, actions_batch in tqdm(
+            zip(states_batches, actions_batches),
+            total=num_batches,
+            desc="Computing weights",
+        ):
 
             states_batch = jax.device_put(states_batch)
             actions_batch = jax.device_put(actions_batch)
 
-            qs = compute_q(agent.target_critic.apply_fn, agent.target_critic.params, states_batch, actions_batch)
+            qs = compute_q(
+                agent.target_critic.apply_fn,
+                agent.target_critic.params,
+                states_batch,
+                actions_batch,
+            )
             vs = compute_v(agent.value.apply_fn, agent.value.params, states_batch)
 
             weights = build_weights_fn(
                 qs, vs, weight_fn=weights_function, hyperparam=critic_hyperparam
             )
-            
+
             weights_list.append(weights)
 
         weights_tensor = jnp.concatenate(weights_list, axis=0)
-        
+
         min_weight = jnp.min(weights_tensor)
         max_weight = jnp.max(weights_tensor)
         mean_weight = jnp.mean(weights_tensor)
         std_weights = jnp.std(weights_tensor)
 
-        print(f"min weight: {min_weight} | max weight: {max_weight} | mean weight: {mean_weight} | std: {std_weights}")
+        print(
+            f"min weight: {min_weight} | max weight: {max_weight} | mean weight: {mean_weight} | std: {std_weights}"
+        )
 
         if norm:
             weights_tensor = (weights_tensor - min_weight) / (max_weight - min_weight)
-        
+
         weights_tensor = jnp.nan_to_num(weights_tensor, nan=min_weight)
-        
-        weights_tensor_np = jax.device_get(weights_tensor)  # Convert from JAX array to NumPy
+
+        weights_tensor_np = jax.device_get(
+            weights_tensor
+        )  # Convert from JAX array to NumPy
         weights_tensor_np = weights_tensor_np[..., None]
 
         assert weights_tensor_np.shape == (len(self.dataset_dict["actions"]), 1)
 
-        self.dataset_dict={"action_weight": np.append(self.dataset_dict["actions"], weights_tensor_np, axis=-1),
-                             "observations": self.dataset_dict["observations"]}
+        self.dataset_dict = {
+            "action_weight": np.append(
+                self.dataset_dict["actions"], weights_tensor_np, axis=-1
+            ),
+            "observations": self.dataset_dict["observations"],
+        }

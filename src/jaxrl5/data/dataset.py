@@ -102,7 +102,9 @@ class Dataset(object):
 
         return frozen_dict.freeze(batch)
 
-    def sample_jax(self, batch_size: int, keys: Optional[Iterable[str]] = None): # TODO se puede hacer mas eficiente sacando llaves, tambien cambiar y agregar llaves
+    def sample_jax(
+        self, batch_size: int, keys: Optional[Iterable[str]] = None
+    ):  # TODO se puede hacer mas eficiente sacando llaves, tambien cambiar y agregar llaves
         if not hasattr(self, "rng"):
             self.rng = jax.random.PRNGKey(self._seed or 42)
 

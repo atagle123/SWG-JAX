@@ -20,6 +20,7 @@ class Q_Model(nn.Module):
 
         return jnp.squeeze(value, -1)
 
+
 class ValueModel(nn.Module):
     base_cls: nn.Module
 
@@ -30,6 +31,7 @@ class ValueModel(nn.Module):
         value = nn.Dense(1, kernel_init=default_init(), name="OutputVDense")(outputs)
 
         return jnp.squeeze(value, -1)
+
 
 class Ensemble(nn.Module):
     net_cls: Type[nn.Module]

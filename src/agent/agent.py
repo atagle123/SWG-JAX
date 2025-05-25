@@ -8,8 +8,10 @@ from flax.training.train_state import TrainState
 from functools import partial
 from src.jaxrl5.types import PRNGKey
 
-def count_params(params): 
+
+def count_params(params):
     return sum(jnp.prod(jnp.array(v.shape)) for v in jax.tree_util.tree_leaves(params))
+
 
 @partial(jax.jit, static_argnames="apply_fn")
 def _sample_actions(rng, apply_fn, params, observations: np.ndarray) -> np.ndarray:
@@ -17,20 +19,23 @@ def _sample_actions(rng, apply_fn, params, observations: np.ndarray) -> np.ndarr
     dist = apply_fn({"params": params}, observations)
     return dist.sample(seed=key), rng
 
+
 @partial(jax.jit, static_argnames="apply_fn")
 def _eval_actions(apply_fn, params, observations: np.ndarray) -> np.ndarray:
     dist = apply_fn({"params": params}, observations)
     return dist.mode()
 
-@partial(jax.jit, static_argnames=('critic_fn'))
+
+@partial(jax.jit, static_argnames=("critic_fn"))
 def compute_q(critic_fn, critic_params, observations, actions):
-    q_values = critic_fn({'params': critic_params}, observations, actions)
+    q_values = critic_fn({"params": critic_params}, observations, actions)
     q_values = q_values.min(axis=0)
     return q_values
 
-@partial(jax.jit, static_argnames=('value_fn'))
+
+@partial(jax.jit, static_argnames=("value_fn"))
 def compute_v(value_fn, value_params, observations):
-    v_values = value_fn({'params': value_params}, observations)
+    v_values = value_fn({"params": value_params}, observations)
     return v_values
 
 
@@ -54,7 +59,7 @@ class Agent(struct.PyTreeNode):
         with open(critic_path, "wb") as f:
             f.write(flax.serialization.to_bytes(self.target_critic.params))
 
-                # Save value parameters
+            # Save value parameters
         value_path = os.path.join(savepath, f"value_params_{step}.msgpack")
         with open(value_path, "wb") as f:
             f.write(flax.serialization.to_bytes(self.value.params))
@@ -66,20 +71,25 @@ class Agent(struct.PyTreeNode):
             f.write(flax.serialization.to_bytes(self.target_score_model.params))
 
     @classmethod
-    def load(cls, cfg, env, actor_dir: str, critic_dir :str, actor_step, critic_step): 
+    def load(cls, cfg, env, actor_dir: str, critic_dir: str, actor_step, critic_step):
         """Load the parameters of the critic, value, and actor models."""
         # Create a new instance of the learner
         agent = cls.create(
             seed=cfg.seed,
             observation_space=env.observation_space,
             action_space=env.action_space,
-            cfg=cfg.agent)
+            cfg=cfg.agent,
+        )
 
         # Load critic parameters
         critic_path = os.path.join(critic_dir, f"critic_params_{critic_step}.msgpack")
         with open(critic_path, "rb") as f:
-            critic_params = flax.serialization.from_bytes(agent.target_critic.params, f.read())
-        agent = agent.replace(target_critic=agent.target_critic.replace(params=critic_params))
+            critic_params = flax.serialization.from_bytes(
+                agent.target_critic.params, f.read()
+            )
+        agent = agent.replace(
+            target_critic=agent.target_critic.replace(params=critic_params)
+        )
 
         # Load value parameters
         value_path = os.path.join(critic_dir, f"value_params_{critic_step}.msgpack")
@@ -90,8 +100,12 @@ class Agent(struct.PyTreeNode):
         # Load actor (score model) parameters
         actor_path = os.path.join(actor_dir, f"actor_params_{actor_step}.msgpack")
         with open(actor_path, "rb") as f:
-            actor_params = flax.serialization.from_bytes(agent.target_score_model.params, f.read())
-        agent = agent.replace(target_score_model=agent.target_score_model.replace(params=actor_params))
+            actor_params = flax.serialization.from_bytes(
+                agent.target_score_model.params, f.read()
+            )
+        agent = agent.replace(
+            target_score_model=agent.target_score_model.replace(params=actor_params)
+        )
 
         print(f"Models loaded from {actor_dir} and {critic_dir}")
         return agent

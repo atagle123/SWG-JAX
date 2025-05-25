@@ -18,7 +18,9 @@ from src.utils.evaluation import evaluate_all_variants
 
 @jax.jit
 def merge_batch(batch1, batch2):
-    return frozen_dict.freeze({k: jnp.concatenate([batch1[k], batch2[k]], axis=0) for k in batch1})
+    return frozen_dict.freeze(
+        {k: jnp.concatenate([batch1[k], batch2[k]], axis=0) for k in batch1}
+    )
 
 
 class Trainer:
@@ -31,7 +33,7 @@ class Trainer:
             wandb.init(
                 project="SWG_JAX",
                 name=cfg.wandb.wandb_exp_name,
-                config=OmegaConf.to_container(cfg, resolve=True)
+                config=OmegaConf.to_container(cfg, resolve=True),
             )
 
         os.makedirs(cfg.savepath.actor_savepath, exist_ok=True)
@@ -41,14 +43,14 @@ class Trainer:
         env = gym.make(self.cfg.dataset.env_entry)
         self.env = env
         dataset, dataset_val = self._load_dataset(env)
-        self.envs_for_eval = [wrap_gym(gym.make(self.cfg.dataset.env_entry)) for _ in range(self.num_episodes)]
+        self.envs_for_eval = [
+            wrap_gym(gym.make(self.cfg.dataset.env_entry))
+            for _ in range(self.num_episodes)
+        ]
 
         model_cls = self.cfg.method.agent._target_
         agent = globals()[model_cls].create(
-            self.cfg.seed,
-            env.observation_space,
-            env.action_space,
-            self.cfg.agent
+            self.cfg.seed, env.observation_space, env.action_space, self.cfg.agent
         )
 
         trained_agent = self._train_loop(agent, dataset, dataset_val)
@@ -57,10 +59,13 @@ class Trainer:
 
     def _load_dataset(self, env):
         dataset = D4RLDataset(env)
-        
+
         if "antmaze" in self.cfg.dataset.env_entry:
             dataset.dataset_dict["rewards"] -= 1.0
-        elif any(name in self.cfg.dataset.env_entry for name in ("halfcheetah", "walker2d", "hopper")):
+        elif any(
+            name in self.cfg.dataset.env_entry
+            for name in ("halfcheetah", "walker2d", "hopper")
+        ):
             dataset.normalize_returns()
 
         return dataset.split(0.95) if self.training_cfg.val_dataset else (dataset, None)
@@ -85,7 +90,9 @@ class Trainer:
                 self._log_info(info, step, prefix="train")
 
                 if dataset_val:
-                    val_sample = dataset_val.sample(critic_cfg.critic_batch_size, keys=keys)
+                    val_sample = dataset_val.sample(
+                        critic_cfg.critic_batch_size, keys=keys
+                    )
                     _, val_info = agent.critic_update(val_sample)
                     self._log_info(val_info, step, prefix="val")
 
@@ -98,10 +105,14 @@ class Trainer:
             agent,
             critic_hyperparam=self.cfg.agent.train.critic_hyperparam,
             weights_function=self.cfg.agent.weight_build.weight_function,
-            norm=self.cfg.agent.weight_build.norm
+            norm=self.cfg.agent.weight_build.norm,
         )
 
-        weights_dataset, weights_val = weights_dataset.split(0.95) if self.training_cfg.val_dataset else (weights_dataset, None)
+        weights_dataset, weights_val = (
+            weights_dataset.split(0.95)
+            if self.training_cfg.val_dataset
+            else (weights_dataset, None)
+        )
 
         # Actor training
         global_step = critic_cfg.critic_steps
@@ -114,7 +125,9 @@ class Trainer:
                 self._log_info(info, global_step, prefix="train")
 
                 if weights_val:
-                    val_sample = weights_val.sample(critic_cfg.actor_batch_size, keys=keys)
+                    val_sample = weights_val.sample(
+                        critic_cfg.actor_batch_size, keys=keys
+                    )
                     _, val_info = agent.actor_update(val_sample)
                     self._log_info(val_info, global_step, prefix="val")
 
@@ -125,7 +138,7 @@ class Trainer:
                     self.cfg.dataset.env_entry,
                     self.training_cfg.sample_params,
                     self.training_cfg.sample_variant,
-                    num_episodes=self.num_episodes
+                    num_episodes=self.num_episodes,
                 )
                 self._log_info(eval_info, global_step, prefix="eval")
 

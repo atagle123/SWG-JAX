@@ -7,7 +7,9 @@ from d4rl import get_normalized_score
 from src.jaxrl5.wrappers import wrap_gym
 
 
-def evaluate(agent, env: gym.Env, num_episodes: int, sample_params: dict) -> dict[str, float]:
+def evaluate(
+    agent, env: gym.Env, num_episodes: int, sample_params: dict
+) -> dict[str, float]:
     env = gym.wrappers.RecordEpisodeStatistics(env, deque_size=num_episodes)
 
     for _ in range(num_episodes):
@@ -20,19 +22,21 @@ def evaluate(agent, env: gym.Env, num_episodes: int, sample_params: dict) -> dic
     return env.get_normalized_score(np.mean(env.return_queue)) * 100.0
 
 
-def evaluate_parallel(agent, envs, env_entry: str, num_episodes: int, sample_params: dict, seed=42) -> dict[str, float]:
+def evaluate_parallel(
+    agent, envs, env_entry: str, num_episodes: int, sample_params: dict, seed=42
+) -> dict[str, float]:
 
-    observations = np.array([env.reset() for  env in envs])
+    observations = np.array([env.reset() for env in envs])
     dones = np.zeros(num_episodes, dtype=bool)
     episode_returns = np.zeros(num_episodes)
 
     rngs = jax.random.split(agent.rng, num_episodes)
     # Iterate over environment steps
     while not jnp.all(dones):
-        vectorized_eval_actions = jax.vmap(agent.eval_actions, in_axes=(0,0, None))
+        vectorized_eval_actions = jax.vmap(agent.eval_actions, in_axes=(0, 0, None))
         actions, rngs = vectorized_eval_actions(observations, rngs, sample_params)
         actions = np.array(actions.squeeze())
-        
+
         # Collect rewards and update states
         next_observations = []
         rewards = []
@@ -58,11 +62,11 @@ def evaluate_parallel(agent, envs, env_entry: str, num_episodes: int, sample_par
         dones = np.array(next_dones)
         episode_returns += np.array(rewards)
 
-    scores = get_normalized_score(env_name=env_entry,score=episode_returns)*100 
+    scores = get_normalized_score(env_name=env_entry, score=episode_returns) * 100
     scores_mean = np.mean(scores)
 
     return scores_mean
-    
+
 
 def convert_sample_variants_format(sample_variant: dict) -> list:
     """
@@ -74,11 +78,18 @@ def convert_sample_variants_format(sample_variant: dict) -> list:
     ]
 
 
-def evaluate_all_variants(agent, envs, env_entry: str, base_sample_params: dict, sample_variant: dict, num_episodes: int) -> dict[str, float]:
+def evaluate_all_variants(
+    agent,
+    envs,
+    env_entry: str,
+    base_sample_params: dict,
+    sample_variant: dict,
+    num_episodes: int,
+) -> dict[str, float]:
     """
     Evaluate the agent for all parameter variants.
     """
-    exp_result_dict={}
+    exp_result_dict = {}
     params_variant_list = convert_sample_variants_format(sample_variant)
     # Evaluate for each parameter variant
     for param_variants in params_variant_list:
@@ -87,7 +98,11 @@ def evaluate_all_variants(agent, envs, env_entry: str, base_sample_params: dict,
 
         print(f"Evaluating with sample params: {sample_params}")
         eval_info = evaluate_parallel(
-            agent, envs, env_entry, num_episodes=num_episodes, sample_params=sample_params
+            agent,
+            envs,
+            env_entry,
+            num_episodes=num_episodes,
+            sample_params=sample_params,
         )
 
         # Create a unique key for the parameter combination

@@ -12,6 +12,7 @@ from src.utils.training import Trainer
 #     Constants & Defaults     #
 # ---------------------------- #
 
+
 @dataclass(frozen=True)
 class Defaults:
     config_path: str = "../configs/D4RL"
@@ -35,13 +36,14 @@ DEFAULTS = Defaults(
         "max_weight_clip": 1.0,
         "min_weight_clip": 0.0001,
     },
-    sample_variant={"guidance_scale": [0, 1]}
+    sample_variant={"guidance_scale": [0, 1]},
 )
 
 
 # ---------------------------- #
 #       Training Config        #
 # ---------------------------- #
+
 
 @dataclass
 class TrainingConfig:
@@ -58,13 +60,18 @@ class TrainingConfig:
 #     Utility Functions        #
 # ---------------------------- #
 
+
 def configure_environment(memory_fraction: str, preallocate: str) -> None:
     """
     Set up memory configuration for JAX runtime.
     """
     os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = memory_fraction
     os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = preallocate
-    logger.info("JAX environment configured: memory_fraction=%s, preallocate=%s", memory_fraction, preallocate)
+    logger.info(
+        "JAX environment configured: memory_fraction=%s, preallocate=%s",
+        memory_fraction,
+        preallocate,
+    )
 
 
 def build_training_config(defaults: Defaults) -> TrainingConfig:
