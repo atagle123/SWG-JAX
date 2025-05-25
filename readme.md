@@ -5,7 +5,7 @@ Self-Weighted Guidance (SWG) paper repository.
 Self-Weighted Guidance (SWG) is a novel guidance method in which both the data and its associated weights (see paper) are modeled by the same diffusion model. This unified modeling enables a self-guided sampling process, where the diffusion model effectively guides itself during generation. 
 
 This repository is built using JAX/Flax, WandB for logging and Hydra for managing hyperparameters.
-See ... for a PyTorch implementation with toy examples.
+See [PyTorch repository](https://github.com/atagle123/SWG-pytorch) for a PyTorch implementation with toy examples.
 
 ## Installation
 
@@ -44,7 +44,7 @@ python scripts/train.py datasets={dataset_name} method=swg seed={your_seed}
 
 ## Evaluating
 
-# change the evaluation parameters in scripts/evaluate.py and run
+Change the evaluation parameters in scripts/evaluate.py and run
 
 ```bash
 python scripts/evaluate.py
